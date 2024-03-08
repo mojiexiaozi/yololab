@@ -35,7 +35,7 @@ LOCAL_RANK = int(
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[1]  # YOLO
 ASSETS = ROOT / "assets"  # default images
-DEFAULT_CFG_PATH = ROOT / "cfg/default.yaml"
+DEFAULT_CFG_PATH = ROOT / "assets/default.yaml"
 NUM_THREADS = min(
     8, max(1, os.cpu_count() - 1)
 )  # number of YOLOv5 multiprocessing threads
@@ -200,7 +200,7 @@ class IterableSimpleNamespace(SimpleNamespace):
             '{name}' object has no attribute '{attr}'. This may be caused by a modified or out of date yololab
             'default.yaml' file.\nPlease update your code with 'pip install -U yololab' and if necessary replace
             {DEFAULT_CFG_PATH} with the latest version from
-            https://github.com/yololab/yololab/blob/main/yololab/cfg/default.yaml
+            https://github.com/yololab/yololab/blob/main/yololab/assets/default.yaml
             """
         )
 
@@ -379,16 +379,6 @@ def yaml_save(file="data.yaml", data=None, header=""):
 
 
 def yaml_load(file="data.yaml", append_filename=False):
-    """
-    Load YAML data from a file.
-
-    Args:
-        file (str, optional): File name. Default is 'data.yaml'.
-        append_filename (bool): Add the YAML filename to the YAML dictionary. Default is False.
-
-    Returns:
-        (dict): YAML data and file name.
-    """
     assert Path(file).suffix in (
         ".yaml",
         ".yml",

@@ -346,18 +346,13 @@ def check_yolov5u_filename(file: str, verbose: bool = True):
 
 def check_model_file_from_stem(model="yolov8n"):
     """Return a model filename from a valid model stem."""
-    if (
-        model
-        and not Path(model).suffix
-        and Path(model).stem in downloads.GITHUB_ASSETS_STEMS
-    ):
+    if model and not Path(model).suffix:
         return Path(model).with_suffix(".pt")  # add suffix, i.e. yolov8n -> yolov8n.pt
     else:
         return model
 
 
-def check_file(file, suffix="", download=True, hard=True):
-    """Search/download file (if necessary) and return path."""
+def check_file(file, suffix="", hard=True):
     check_suffix(file, suffix)  # optional
     file = str(file).strip()  # convert to string and strip spaces
     file = check_yolov5u_filename(file)  # yolov5n -> yolov5nu
@@ -369,20 +364,10 @@ def check_file(file, suffix="", download=True, hard=True):
         or file.lower().startswith("grpc://")
     ):  # file exists or gRPC Triton images
         return file
-    elif download and file.lower().startswith(
-        ("https://", "http://", "rtsp://", "rtmp://", "tcp://")
-    ):  # download
-        url = file  # warning: Pathlib turns :// -> :/
-        file = url2file(file)  # '%2F' to '/', split https://url.com/file.txt?auth
-        if Path(file).exists():
-            LOGGER.info(
-                f"Found {clean_url(url)} locally at {file}"
-            )  # file already exists
-        else:
-            downloads.safe_download(url=url, file=file, unzip=False)
-        return file
     else:  # search
-        files = glob.glob(str(ROOT / "cfg" / "**" / file), recursive=True)  # find file
+        files = glob.glob(
+            str(ROOT / "assets" / "**" / file), recursive=True
+        )  # find file
         if not files and hard:
             raise FileNotFoundError(f"'{file}' does not exist")
         elif len(files) > 1 and hard:

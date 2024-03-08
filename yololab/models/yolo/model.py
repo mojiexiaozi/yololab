@@ -74,12 +74,6 @@ class YOLOWorld(Model):
     """YOLO-World object detection model."""
 
     def __init__(self, model="yolov8s-world.pt") -> None:
-        """
-        Initializes the YOLOv8-World model with the given pre-trained model file. Supports *.pt and *.yaml formats.
-
-        Args:
-            model (str | Path): Path to the pre-trained model. Defaults to 'yolov8s-world.pt'.
-        """
         super().__init__(model=model, task="detect")
 
         # Assign default COCO class names
