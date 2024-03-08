@@ -1,0 +1,8 @@
+nc: 1000
+backbone:
+  # [from, repeats, module, args]
+  - [-1, 1, tf_mobilenetv3_large_075, [
+    "https://github.com/rwightman/pytorch-image-models/releases/download/v0.1-weights/tf_mobilenetv3_large_075-150ee8b0.pth",]]
+
+head:
+  - [-1, 1, Classify, [nc]] # Classify

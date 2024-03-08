@@ -1,0 +1,7 @@
+nc: 1000
+backbone:
+  # [from, repeats, module, args]
+  - [-1, 1, tf_efficientnet_b0, ["https://github.com/huggingface/pytorch-image-models/releases/download/v0.1-weights/tf_efficientnet_b0-0af12548.pth"]]
+
+head:
+  - [-1, 1, Classify, [nc]] # Classify

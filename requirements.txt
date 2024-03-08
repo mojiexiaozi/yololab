@@ -1,0 +1,4 @@
+pyyaml
+timm
+opencv-python
+numpy
