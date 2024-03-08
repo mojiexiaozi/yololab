@@ -577,7 +577,7 @@ class BaseTrainer:
     @staticmethod
     def get_dataset(root_dir):
         root_dir = Path(root_dir)
-        return root_dir / "train", root_dir / "val"
+        return root_dir / "train", root_dir / "validation"
 
     def setup_model(self):
         """Load/create/download model for any task."""
