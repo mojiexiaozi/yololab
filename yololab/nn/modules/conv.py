@@ -36,12 +36,9 @@ def autopad(k, p=None, d=1):  # kernel, padding, dilation
 
 
 class Conv(nn.Module):
-    """Standard convolution with args(ch_in, ch_out, kernel, stride, padding, groups, dilation, activation)."""
-
     default_act = nn.SiLU()  # default activation
 
     def __init__(self, c1, c2, k=1, s=1, p=None, g=1, d=1, act=True):
-        """Initialize Conv layer with given arguments including activation."""
         super().__init__()
         self.conv = nn.Conv2d(
             c1, c2, k, s, autopad(k, p, d), groups=g, dilation=d, bias=False
@@ -54,11 +51,23 @@ class Conv(nn.Module):
         )
 
     def forward(self, x):
-        """Apply convolution, batch normalization and activation to input tensor."""
         return self.act(self.bn(self.conv(x)))
 
     def forward_fuse(self, x):
-        """Perform transposed convolution of 2D data."""
+        return self.act(self.conv(x))
+
+
+class LightConv(nn.Module):
+    def __init__(self, c1, c2, k=1, s=1, bn=True, act=None) -> None:
+        super().__init__()
+        self.conv = nn.Conv2d(c1, c2, k, s, autopad(k), bias=not bn)
+        self.bn = nn.BatchNorm2d(c2) if bn else nn.Identity()
+        self.act = nn.SiLU() if act is None else act()
+
+    def forward(self, x):
+        return self.act(self.bn(self.conv(x)))
+
+    def forward_fuse(self, x):
         return self.act(self.conv(x))
 
 

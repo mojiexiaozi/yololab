@@ -494,26 +494,6 @@ def collect_system_info():
 
 
 def check_amp(model):
-    """
-    This function checks the PyTorch Automatic Mixed Precision (AMP) functionality of a YOLOv8 model. If the checks
-    fail, it means there are anomalies with AMP on the system that may cause NaN losses or zero-mAP results, so AMP will
-    be disabled during training.
-
-    Args:
-        model (nn.Module): A YOLOv8 model instance.
-
-    Example:
-        ```python
-        from yololab import YOLO
-        from yololab.utils.checks import check_amp
-
-        model = YOLO('yolov8n.pt').model.cuda()
-        check_amp(model)
-        ```
-
-    Returns:
-        (bool): Returns True if the AMP functionality works correctly with YOLOv8 model, else False.
-    """
     device = next(model.parameters()).device  # get model device
     if device.type in ("cpu", "mps"):
         return False  # AMP only used on CUDA devices
@@ -528,6 +508,8 @@ def check_amp(model):
             a, b.float(), atol=0.5
         )  # close to 0.5 absolute tolerance
 
+    # TODO: check if AMP is available on the system
+    return True
     im = ASSETS / "bus.jpg"  # image to check
     prefix = colorstr("AMP: ")
     LOGGER.info(

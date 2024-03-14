@@ -15,7 +15,7 @@ import psutil
 from torch.utils.data import Dataset
 
 from yololab.utils import DEFAULT_CFG, LOCAL_RANK, LOGGER, NUM_THREADS, TQDM
-from .utils import HELP_URL, IMG_FORMATS
+from .utils import IMG_FORMATS
 
 
 class BaseDataset(Dataset):
@@ -105,7 +105,7 @@ class BaseDataset(Dataset):
             assert im_files, f"{self.prefix}No images found in {img_path}"
         except Exception as e:
             raise FileNotFoundError(
-                f"{self.prefix}Error loading data from {img_path}\n{HELP_URL}"
+                f"{self.prefix}Error loading data from {img_path}"
             ) from e
         if self.fraction < 1:
             im_files = im_files[: round(len(im_files) * self.fraction)]

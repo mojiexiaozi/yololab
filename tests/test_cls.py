@@ -2,9 +2,9 @@ from yololab import YOLO
 
 if __name__ == "__main__":
     for m in [
-        # "light-cls-tf_efficientnet_b0",
-        # "light-cls-mobilenetv3_large",
-        # "yolov8n-cls",
+        "light-cls-tf_efficientnet_b0",
+        "light-cls-mobilenetv3_large",
+        "yolov8n-cls",
         "yolov8s-cls",
         "yolov8m-cls",
         "yolov8l-cls",
@@ -13,7 +13,7 @@ if __name__ == "__main__":
 
         model.train(
             data="datasets/imagenet10",
-            epochs=500,
+            epochs=200,
             nc=15,
             device=0,
             imgsz=224,

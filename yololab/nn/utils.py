@@ -30,6 +30,7 @@ from yololab.nn.modules import (
     Classify,
     Concat,
     Conv,
+    LightConv,
     ConvTranspose,
     Detect,
     DWConv,
@@ -259,6 +260,7 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
         if m in (
             Classify,
             Conv,
+            LightConv,
             ConvTranspose,
             GhostConv,
             Bottleneck,

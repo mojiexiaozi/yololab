@@ -34,6 +34,7 @@ from .conv import (
     Concat,
     Conv,
     Conv2,
+    LightConv,
     ConvTranspose,
     DWConv,
     DWConvTranspose2d,
@@ -60,6 +61,7 @@ from .transformer import (
 __all__ = (
     "Conv",
     "Conv2",
+    "LightConv",
     "LightConv",
     "RepConv",
     "DWConv",

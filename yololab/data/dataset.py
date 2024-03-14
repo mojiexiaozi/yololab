@@ -3,16 +3,18 @@ import contextlib
 from itertools import repeat
 from multiprocessing.pool import ThreadPool
 from pathlib import Path
+from torch.utils.data import Dataset
 
 import cv2
 import numpy as np
 import torch
 import torchvision
 from PIL import Image
+from glob import glob
 
 from yololab.utils import LOCAL_RANK, NUM_THREADS, TQDM, colorstr, is_dir_writeable
 from yololab.utils.ops import resample_segments
-from .augment import (
+from yololab.data.augment import (
     Compose,
     Format,
     Instances,
@@ -20,15 +22,16 @@ from .augment import (
     classify_augmentations,
     classify_transforms,
     v8_transforms,
+    segment_transforms,
 )
-from .base import BaseDataset
-from .utils import (
-    HELP_URL,
+from yololab.data.base import BaseDataset
+from yololab.data.utils import (
     LOGGER,
     get_hash,
     img2label_paths,
     verify_image,
     verify_image_label,
+    IMG_FORMATS,
 )
 
 # yololab dataset *.cache version, >= 1.0.0 for YOLOv8
@@ -115,9 +118,7 @@ class YOLODataset(BaseDataset):
         if msgs:
             LOGGER.info("\n".join(msgs))
         if nf == 0:
-            LOGGER.warning(
-                f"{self.prefix}WARNING ⚠️ No labels found in {path}. {HELP_URL}"
-            )
+            LOGGER.warning(f"{self.prefix}WARNING ⚠️ No labels found in {path}.")
         x["hash"] = get_hash(self.label_files + self.im_files)
         x["results"] = nf, nm, ne, nc, len(self.im_files)
         x["msgs"] = msgs  # warnings
@@ -155,7 +156,7 @@ class YOLODataset(BaseDataset):
         labels = cache["labels"]
         if not labels:
             LOGGER.warning(
-                f"WARNING ⚠️ No images found in {cache_path}, training may not work correctly. {HELP_URL}"
+                f"WARNING ⚠️ No images found in {cache_path}, training may not work correctly."
             )
         self.im_files = [lb["im_file"] for lb in labels]  # update im_files
 
@@ -174,7 +175,7 @@ class YOLODataset(BaseDataset):
                 lb["segments"] = []
         if len_cls == 0:
             LOGGER.warning(
-                f"WARNING ⚠️ No labels found in {cache_path}, training may not work correctly. {HELP_URL}"
+                f"WARNING ⚠️ No labels found in {cache_path}, training may not work correctly."
             )
         return labels
 
@@ -311,7 +312,6 @@ class ClassificationDataset(torchvision.datasets.ImageFolder):
         return {"img": sample, "cls": j}
 
     def __len__(self) -> int:
-        """Return the total number of samples in the dataset."""
         return len(self.samples)
 
     def verify_images(self):
@@ -385,8 +385,47 @@ def save_dataset_cache_file(prefix, path, x):
         )
 
 
-# TODO: support semantic segmentation
-class SemanticDataset(BaseDataset):
-    def __init__(self):
-        """Initialize a SemanticDataset object."""
+class SemanticDataset(Dataset):
+    def __init__(self, img_path, imgsz=640, augment=True) -> None:
         super().__init__()
+
+        self.root = Path(img_path)
+        self.images_dir = self.root.joinpath("images")
+        self.labels_dir = self.root.joinpath("masks")
+        if isinstance(imgsz, int):
+            self.imgsz = (imgsz, imgsz)
+        else:
+            self.imgsz = imgsz
+
+        images = images = filter(
+            lambda filename: filename.lower().endswith(IMG_FORMATS),
+            glob(f"{self.images_dir}/**", recursive=False),
+        )
+        self.samples = []
+        for im_file in images:
+            try:
+                mask_file = self.labels_dir.joinpath(f"{Path(im_file).stem}.png")
+                Image.open(mask_file)
+                Image.open(im_file)
+                if mask_file.is_file():
+                    self.samples.append((im_file, mask_file.as_posix()))
+            except Exception as e:
+                LOGGER.warn(e)
+
+        self.transforms = segment_transforms(augment, imgsz=self.imgsz)
+
+    def __len__(self):
+        return len(self.samples)
+
+    def __getitem__(self, index):
+        im_file, label_file = self.samples[index]
+        im = Image.open(im_file).convert("RGB")
+        mask = Image.open(label_file)
+        sample = self.transforms(image=np.array(im), mask=np.array(mask))
+        return dict(im_file=im_file, img=sample["image"], mask=sample["mask"])
+
+
+if __name__ == "__main__":
+    dataset = SemanticDataset(img_path="datasets/seg/train")
+    data = dataset[0]
+    print(data["img"].shape)

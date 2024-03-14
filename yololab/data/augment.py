@@ -8,6 +8,8 @@ import cv2
 import numpy as np
 import torch
 import torchvision.transforms as T
+import albumentations as albu
+from albumentations.pytorch import ToTensorV2
 
 from yololab.utils import LOGGER, colorstr
 from yololab.utils.checks import check_version
@@ -749,36 +751,26 @@ class Albumentations:
         self.p = p
         self.transform = None
         prefix = colorstr("albumentations: ")
-        try:
-            import albumentations as A
 
-            check_version(A.__version__, "1.0.3", hard=True)  # version requirement
+        # Transforms
+        T = [
+            albu.Blur(p=0.01),
+            albu.MedianBlur(p=0.01),
+            albu.ToGray(p=0.01),
+            albu.CLAHE(p=0.01),
+            albu.RandomBrightnessContrast(p=0.0),
+            albu.RandomGamma(p=0.0),
+            albu.ImageCompression(quality_lower=75, p=0.0),
+        ]
+        self.transform = albu.Compose(
+            T,
+            bbox_params=albu.BboxParams(format="yolo", label_fields=["class_labels"]),
+        )
 
-            # Transforms
-            T = [
-                A.Blur(p=0.01),
-                A.MedianBlur(p=0.01),
-                A.ToGray(p=0.01),
-                A.CLAHE(p=0.01),
-                A.RandomBrightnessContrast(p=0.0),
-                A.RandomGamma(p=0.0),
-                A.ImageCompression(quality_lower=75, p=0.0),
-            ]
-            self.transform = A.Compose(
-                T,
-                bbox_params=A.BboxParams(format="yolo", label_fields=["class_labels"]),
-            )
-
-            LOGGER.info(
-                prefix
-                + ", ".join(
-                    f"{x}".replace("always_apply=False, ", "") for x in T if x.p
-                )
-            )
-        except ImportError:  # package not installed, skip
-            pass
-        except Exception as e:
-            LOGGER.info(f"{prefix}{e}")
+        LOGGER.info(
+            prefix
+            + ", ".join(f"{x}".replace("always_apply=False, ", "") for x in T if x.p)
+        )
 
     def __call__(self, labels):
         """Generates object detections and returns a dictionary with detection results."""
@@ -1049,3 +1041,77 @@ def classify_augmentations(
     ]
 
     return T.Compose(primary_tfl + secondary_tfl + final_tfl)
+
+
+def segment_transforms(augment=True, imgsz=(640, 640)):
+    h, w = imgsz
+    if augment:
+        return albu.Compose(
+            [
+                albu.Resize(height=h, width=w),
+                albu.HorizontalFlip(always_apply=False, p=0.5),
+                albu.VerticalFlip(always_apply=False, p=0.5),
+                albu.ShiftScaleRotate(
+                    always_apply=False,
+                    p=0.5,
+                    shift_limit_x=(-0.05, 0.05),
+                    shift_limit_y=(-0.05, 0.05),
+                    scale_limit=(0.0, 0.0),
+                    rotate_limit=(-180, 180),
+                    interpolation=1,
+                    border_mode=1,
+                    value=None,
+                    mask_value=None,
+                ),
+                albu.OneOf(
+                    [
+                        albu.CLAHE(
+                            always_apply=False,
+                            p=1,
+                            clip_limit=(1, 4.0),
+                            tile_grid_size=(8, 8),
+                        ),
+                        albu.RandomBrightnessContrast(
+                            always_apply=False, p=1, brightness_limit=0.2
+                        ),
+                        albu.RandomGamma(
+                            always_apply=False, p=1, gamma_limit=(80, 120)
+                        ),
+                        albu.HueSaturationValue(
+                            always_apply=False,
+                            p=1,
+                            hue_shift_limit=(-20, 20),
+                            sat_shift_limit=(-30, 30),
+                            val_shift_limit=(-20, 20),
+                        ),
+                    ],
+                    p=0.5,
+                ),
+                albu.OneOf(
+                    [
+                        albu.Sharpen(
+                            always_apply=False,
+                            p=1,
+                            alpha=(0.2, 0.5),
+                            lightness=(0.5, 1.0),
+                        ),
+                        albu.Blur(always_apply=False, p=1, blur_limit=(3, 3)),
+                        albu.MotionBlur(always_apply=False, p=1, blur_limit=(3, 3)),
+                    ],
+                    p=0.5,
+                ),
+                ToTensorV2(),
+            ],
+            p=1.0,
+            bbox_params=None,
+            keypoint_params=None,
+            additional_targets={},
+        )
+    else:
+        return albu.Compose(
+            [
+                albu.Resize(height=h, width=w),
+                # albu.Normalize(mean=MEAN, std=STD),
+                ToTensorV2(),
+            ]
+        )

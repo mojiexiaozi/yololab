@@ -16,9 +16,6 @@ from yololab.utils import (
 )
 from yololab.utils.ops import segments2boxes
 
-HELP_URL = (
-    "See https://docs.yololab.com/datasets/detect for dataset formatting guidance."
-)
 IMG_FORMATS = (
     "bmp",
     "dng",
