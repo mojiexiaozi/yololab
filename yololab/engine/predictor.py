@@ -61,13 +61,6 @@ Example:
 
 class BasePredictor:
     def __init__(self, cfg=DEFAULT_CFG, overrides=None, _callbacks=None):
-        """
-        Initializes the BasePredictor class.
-
-        Args:
-            cfg (str, optional): Path to a configuration file. Defaults to DEFAULT_CFG.
-            overrides (dict, optional): Configuration overrides. Defaults to None.
-        """
         self.args = get_cfg(cfg, overrides)
         self.save_dir = get_save_dir(self.args)
         if self.args.conf is None:
@@ -95,12 +88,6 @@ class BasePredictor:
         callbacks.add_integration_callbacks(self)
 
     def preprocess(self, im):
-        """
-        Prepares input image before inference.
-
-        Args:
-            im (torch.Tensor | List(np.ndarray)): BCHW for tensor, [(HWC) x B] for list.
-        """
         not_tensor = not isinstance(im, torch.Tensor)
         if not_tensor:
             im = np.stack(self.pre_transform(im))
@@ -133,15 +120,6 @@ class BasePredictor:
         )
 
     def pre_transform(self, im):
-        """
-        Pre-transform input image before inference.
-
-        Args:
-            im (List(np.ndarray)): (N, 3, h, w) for tensor, [(h, w, 3) x N] for list.
-
-        Returns:
-            (list): A list of transformed images.
-        """
         same_shapes = all(x.shape == im[0].shape for x in im)
         letterbox = LetterBox(
             self.imgsz, auto=same_shapes and self.model.pt, stride=self.model.stride
@@ -194,7 +172,6 @@ class BasePredictor:
         return log_string
 
     def postprocess(self, preds, img, orig_imgs):
-        """Post-processes predictions for an image and returns them."""
         return preds
 
     def __call__(self, source=None, model=None, stream=False, *args, **kwargs):
@@ -208,11 +185,6 @@ class BasePredictor:
             )  # merge list of Result into one
 
     def predict_cli(self, source=None, model=None):
-        """
-        Method used for CLI prediction.
-
-        It uses always generator as outputs as not required by CLI mode.
-        """
         gen = self.stream_inference(source, model)
         for (
             _
@@ -255,7 +227,6 @@ class BasePredictor:
 
     @smart_inference_mode()
     def stream_inference(self, source=None, model=None, *args, **kwargs):
-        """Streams real-time inference on camera feed and saves results to file."""
         if self.args.verbose:
             LOGGER.info("")
 

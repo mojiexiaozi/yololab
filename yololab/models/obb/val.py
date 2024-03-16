@@ -4,7 +4,7 @@ from pathlib import Path
 
 import torch
 
-from yololab.models.yolo.detect import DetectionValidator
+from yololab.models.detect import DetectionValidator
 from yololab.utils import LOGGER, ops
 from yololab.utils.metrics import OBBMetrics, batch_probiou
 from yololab.utils.plotting import output_to_rotated_target, plot_images

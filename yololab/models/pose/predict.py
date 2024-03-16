@@ -1,7 +1,7 @@
 # yololab YOLO 🚀, AGPL-3.0 license
 
 from yololab.engine.results import Results
-from yololab.models.yolo.detect.predict import DetectionPredictor
+from yololab.models.detect.predict import DetectionPredictor
 from yololab.utils import DEFAULT_CFG, LOGGER, ops
 
 

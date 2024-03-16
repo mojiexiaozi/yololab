@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from yololab.models.yolo.detect import DetectionValidator
+from yololab.models.detect import DetectionValidator
 from yololab.utils import LOGGER, ops
 from yololab.utils.checks import check_requirements
 from yololab.utils.metrics import OKS_SIGMA, PoseMetrics, box_iou, kpt_iou

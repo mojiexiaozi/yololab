@@ -232,43 +232,21 @@ class DetectionValidator(BaseValidator):
                 )
 
     def _process_batch(self, detections, gt_bboxes, gt_cls):
-        """
-        Return correct prediction matrix.
-
-        Args:
-            detections (torch.Tensor): Tensor of shape [N, 6] representing detections.
-                Each detection is of the format: x1, y1, x2, y2, conf, class.
-            labels (torch.Tensor): Tensor of shape [M, 5] representing labels.
-                Each label is of the format: class, x1, y1, x2, y2.
-
-        Returns:
-            (torch.Tensor): Correct prediction matrix of shape [N, 10] for 10 IoU levels.
-        """
         iou = box_iou(gt_bboxes, detections[:, :4])
         return self.match_predictions(detections[:, 5], gt_cls, iou)
 
     def build_dataset(self, img_path, mode="val", batch=None):
-        """
-        Build YOLO Dataset.
-
-        Args:
-            img_path (str): Path to the folder containing images.
-            mode (str): `train` mode or `val` mode, users are able to customize different augmentations for each mode.
-            batch (int, optional): Size of batches, this is for `rect`. Defaults to None.
-        """
         return build_yolo_dataset(
             self.args, img_path, batch, self.data, mode=mode, stride=self.stride
         )
 
     def get_dataloader(self, dataset_path, batch_size):
-        """Construct and return dataloader."""
         dataset = self.build_dataset(dataset_path, batch=batch_size, mode="val")
         return build_dataloader(
             dataset, batch_size, self.args.workers, shuffle=False, rank=-1
         )  # return dataloader
 
     def plot_val_samples(self, batch, ni):
-        """Plot validation image samples."""
         plot_images(
             batch["img"],
             batch["batch_idx"],
@@ -281,7 +259,6 @@ class DetectionValidator(BaseValidator):
         )
 
     def plot_predictions(self, batch, preds, ni):
-        """Plots predicted bounding boxes on input images and saves the result."""
         plot_images(
             batch["img"],
             *output_to_target(preds, max_det=self.args.max_det),
@@ -292,7 +269,6 @@ class DetectionValidator(BaseValidator):
         )  # pred
 
     def save_one_txt(self, predn, save_conf, shape, file):
-        """Save YOLO detections to a txt file in normalized coordinates in a specific format."""
         gn = torch.tensor(shape)[[1, 0, 1, 0]]  # normalization gain whwh
         for *xyxy, conf, cls in predn.tolist():
             xywh = (
@@ -303,7 +279,6 @@ class DetectionValidator(BaseValidator):
                 f.write(("%g " * len(line)).rstrip() % line + "\n")
 
     def pred_to_json(self, predn, filename):
-        """Serialize YOLO predictions to COCO json format."""
         stem = Path(filename).stem
         image_id = int(stem) if stem.isnumeric() else stem
         box = ops.xyxy2xywh(predn[:, :4])  # xywh
@@ -319,7 +294,6 @@ class DetectionValidator(BaseValidator):
             )
 
     def eval_json(self, stats):
-        """Evaluates YOLO output in JSON format and returns performance statistics."""
         if self.args.save_json and self.is_coco and len(self.jdict):
             anno_json = (
                 self.data["path"] / "annotations/instances_val2017.json"

@@ -3,7 +3,7 @@
 import torch
 
 from yololab.engine.results import Results
-from yololab.models.yolo.detect.predict import DetectionPredictor
+from yololab.models.detect.predict import DetectionPredictor
 from yololab.utils import DEFAULT_CFG, ops
 
 

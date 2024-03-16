@@ -484,9 +484,8 @@ def init_seeds(seed=0, deterministic=False):
     # torch.backends.cudnn.benchmark = True  # AutoBatch problem https://github.com/yololab/ultralytics/issues/9287
     if deterministic:
         if TORCH_2_0:
-            torch.use_deterministic_algorithms(
-                True, warn_only=True
-            )  # warn if deterministic is not possible
+            # warn if deterministic is not possible
+            torch.use_deterministic_algorithms(True, warn_only=True)
             torch.backends.cudnn.deterministic = True
             os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
             os.environ["PYTHONHASHSEED"] = str(seed)
@@ -500,12 +499,6 @@ def init_seeds(seed=0, deterministic=False):
 
 
 class ModelEMA:
-    """Updated Exponential Moving Average (EMA) from https://github.com/rwightman/pytorch-image-models
-    Keeps a moving average of everything in the model state_dict (parameters and buffers)
-    For EMA details see https://www.tensorflow.org/api_docs/python/tf/train/ExponentialMovingAverage
-    To disable EMA set the `enabled` attribute to `False`.
-    """
-
     def __init__(self, model, decay=0.9999, tau=2000, updates=0):
         """Create EMA."""
         self.ema = deepcopy(de_parallel(model)).eval()  # FP32 EMA
@@ -537,25 +530,6 @@ class ModelEMA:
 
 
 def strip_optimizer(f: Union[str, Path] = "best.pt", s: str = "") -> None:
-    """
-    Strip optimizer from 'f' to finalize training, optionally save as 's'.
-
-    Args:
-        f (str): file path to model to strip the optimizer from. Default is 'best.pt'.
-        s (str): file path to save the model with stripped optimizer to. If not provided, 'f' will be overwritten.
-
-    Returns:
-        None
-
-    Example:
-        ```python
-        from pathlib import Path
-        from yololab.utils.torch_utils import strip_optimizer
-
-        for f in Path('path/to/weights').rglob('*.pt'):
-            strip_optimizer(f)
-        ```
-    """
     x = torch.load(f, map_location=torch.device("cpu"))
     if "model" not in x:
         LOGGER.info(f"Skipping {f}, not a valid yololab model.")
@@ -588,19 +562,6 @@ def strip_optimizer(f: Union[str, Path] = "best.pt", s: str = "") -> None:
 
 
 def profile(input, ops, n=10, device=None):
-    """
-    yololab speed, memory and FLOPs profiler.
-
-    Example:
-        ```python
-        from yololab.utils.torch_utils import profile
-
-        input = torch.randn(16, 3, 640, 640)
-        m1 = lambda x: x * torch.sigmoid(x)
-        m2 = nn.SiLU()
-        profile(input, [m1, m2], n=100)  # profile over 100 iterations
-        ```
-    """
     results = []
     if not isinstance(device, torch.device):
         device = select_device(device)
@@ -672,15 +633,7 @@ def profile(input, ops, n=10, device=None):
 
 
 class EarlyStopping:
-    """Early stopping class that stops training when a specified number of epochs have passed without improvement."""
-
     def __init__(self, patience=50):
-        """
-        Initialize early stopping object.
-
-        Args:
-            patience (int, optional): Number of epochs to wait after fitness stops improving before stopping.
-        """
         self.best_fitness = 0.0  # i.e. mAP
         self.best_epoch = 0
         self.patience = patience or float(
@@ -689,16 +642,6 @@ class EarlyStopping:
         self.possible_stop = False  # possible stop may occur next epoch
 
     def __call__(self, epoch, fitness):
-        """
-        Check whether to stop training.
-
-        Args:
-            epoch (int): Current epoch of training
-            fitness (float): Fitness value of current epoch
-
-        Returns:
-            (bool): True if training should stop, False otherwise
-        """
         if fitness is None:  # check if fitness=None (happens when val=False)
             return False
 

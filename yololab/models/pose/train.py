@@ -2,13 +2,13 @@
 
 from copy import copy
 
-from yololab.models import yolo
+from yololab.models import detect, pose
 from yololab.nn.tasks import PoseModel
 from yololab.utils import DEFAULT_CFG, LOGGER
 from yololab.utils.plotting import plot_images, plot_results
 
 
-class PoseTrainer(yolo.detect.DetectionTrainer):
+class PoseTrainer(detect.DetectionTrainer):
     def __init__(self, cfg=DEFAULT_CFG, overrides=None, _callbacks=None):
         """Initialize a PoseTrainer object with specified configurations and overrides."""
         if overrides is None:
@@ -44,7 +44,7 @@ class PoseTrainer(yolo.detect.DetectionTrainer):
     def get_validator(self):
         """Returns an instance of the PoseValidator class for validation."""
         self.loss_names = "box_loss", "pose_loss", "kobj_loss", "cls_loss", "dfl_loss"
-        return yolo.pose.PoseValidator(
+        return pose.PoseValidator(
             self.test_loader,
             save_dir=self.save_dir,
             args=copy(self.args),

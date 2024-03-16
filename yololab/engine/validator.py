@@ -1,35 +1,12 @@
-# yololab YOLO 🚀, AGPL-3.0 license
-"""
-Check a model's accuracy on a test or val split of a dataset.
-
-Usage:
-    $ yolo mode=val model=yolov8n.pt data=coco128.yaml imgsz=640
-
-Usage - formats:
-    $ yolo mode=val model=yolov8n.pt                 # PyTorch
-                          yolov8n.torchscript        # TorchScript
-                          yolov8n.onnx               # ONNX Runtime or OpenCV DNN with dnn=True
-                          yolov8n_openvino_model     # OpenVINO
-                          yolov8n.engine             # TensorRT
-                          yolov8n.mlpackage          # CoreML (macOS-only)
-                          yolov8n_saved_model        # TensorFlow SavedModel
-                          yolov8n.pb                 # TensorFlow GraphDef
-                          yolov8n.tflite             # TensorFlow Lite
-                          yolov8n_edgetpu.tflite     # TensorFlow Edge TPU
-                          yolov8n_paddle_model       # PaddlePaddle
-                          yolov8n_ncnn_model         # NCNN
-"""
-
 import json
 import time
 from pathlib import Path
-
 import numpy as np
 import torch
 
 from yololab.cfg import get_cfg, get_save_dir
 from yololab.nn.autobackend import AutoBackend
-from yololab.utils import LOGGER, TQDM, callbacks, colorstr, emojis
+from yololab.utils import LOGGER, TQDM, callbacks, colorstr
 from yololab.utils.checks import check_imgsz
 from yololab.utils.ops import Profile
 from yololab.utils.torch_utils import de_parallel, select_device, smart_inference_mode
@@ -202,19 +179,6 @@ class BaseValidator:
             return stats
 
     def match_predictions(self, pred_classes, true_classes, iou, use_scipy=False):
-        """
-        Matches predictions to ground truth objects (pred_classes, true_classes) using IoU.
-
-        Args:
-            pred_classes (torch.Tensor): Predicted class indices of shape(N,).
-            true_classes (torch.Tensor): Target class indices of shape(M,).
-            iou (torch.Tensor): An NxM tensor containing the pairwise IoU values for predictions and ground of truth
-            use_scipy (bool): Whether to use scipy for matching (more precise).
-
-        Returns:
-            (torch.Tensor): Correct tensor of shape(N,10) for 10 IoU thresholds.
-        """
-        # Dx10 matrix, where D - detections, 10 - IoU thresholds
         correct = np.zeros((pred_classes.shape[0], self.iouv.shape[0])).astype(bool)
         # LxD matrix where L - labels (rows), D - detections (columns)
         correct_class = true_classes[:, None] == pred_classes
@@ -222,7 +186,6 @@ class BaseValidator:
         iou = iou.cpu().numpy()
         for i, threshold in enumerate(self.iouv.cpu().tolist()):
             if use_scipy:
-                # WARNING: known issue that reduces mAP in https://github.com/yololab/yololab/pull/4708
                 import scipy  # scope import to avoid importing for all commands
 
                 cost_matrix = iou * (iou >= threshold)
@@ -254,82 +217,62 @@ class BaseValidator:
         return torch.tensor(correct, dtype=torch.bool, device=pred_classes.device)
 
     def add_callback(self, event: str, callback):
-        """Appends the given callback."""
         self.callbacks[event].append(callback)
 
     def run_callbacks(self, event: str):
-        """Runs all callbacks associated with a specified event."""
         for callback in self.callbacks.get(event, []):
             callback(self)
 
     def get_dataloader(self, dataset_path, batch_size):
-        """Get data loader from dataset path and batch size."""
         raise NotImplementedError(
             "get_dataloader function not implemented for this validator"
         )
 
     def build_dataset(self, img_path):
-        """Build dataset."""
         raise NotImplementedError("build_dataset function not implemented in validator")
 
     def preprocess(self, batch):
-        """Preprocesses an input batch."""
         return batch
 
     def postprocess(self, preds):
-        """Describes and summarizes the purpose of 'postprocess()' but no details mentioned."""
         return preds
 
     def init_metrics(self, model):
-        """Initialize performance metrics for the YOLO model."""
         pass
 
     def update_metrics(self, preds, batch):
-        """Updates metrics based on predictions and batch."""
         pass
 
     def finalize_metrics(self, *args, **kwargs):
-        """Finalizes and returns all metrics."""
         pass
 
     def get_stats(self):
-        """Returns statistics about the model's performance."""
         return {}
 
     def check_stats(self, stats):
-        """Checks statistics."""
         pass
 
     def print_results(self):
-        """Prints the results of the model's predictions."""
         pass
 
     def get_desc(self):
-        """Get description of the YOLO model."""
         pass
 
     @property
     def metric_keys(self):
-        """Returns the metric keys used in YOLO training/validation."""
         return []
 
     def on_plot(self, name, data=None):
-        """Registers plots (e.g. to be consumed in callbacks)"""
         self.plots[Path(name)] = {"data": data, "timestamp": time.time()}
 
-    # TODO: may need to put these following functions into callback
     def plot_val_samples(self, batch, ni):
-        """Plots validation samples during training."""
         pass
 
     def plot_predictions(self, batch, preds, ni):
-        """Plots YOLO model predictions on batch images."""
         pass
 
     def pred_to_json(self, preds, batch):
-        """Convert predictions to JSON format."""
         pass
 
     def eval_json(self, stats):
-        """Evaluate and return JSON format of prediction statistics."""
         pass

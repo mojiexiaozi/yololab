@@ -5,9 +5,10 @@ import torchvision
 
 from yololab.data import ClassificationDataset, build_dataloader
 from yololab.engine.trainer import BaseTrainer
-from yololab.models import yolo
+from yololab.models import classify
 from yololab.nn.tasks import ClassificationModel
 from yololab.nn.utils import attempt_load_one_weight
+from yololab.utils.metrics import ClassifyMetrics, ConfusionMatrix
 from yololab.utils import DEFAULT_CFG, LOGGER, RANK, colorstr
 from yololab.utils.plotting import plot_images, plot_results
 from yololab.utils.torch_utils import (
@@ -19,7 +20,6 @@ from yololab.utils.torch_utils import (
 
 class ClassificationTrainer(BaseTrainer):
     def __init__(self, cfg=DEFAULT_CFG, overrides=None, _callbacks=None):
-        """Initialize a ClassificationTrainer object with optional configuration overrides and callbacks."""
         if overrides is None:
             overrides = {}
         overrides["task"] = "classify"
@@ -28,12 +28,10 @@ class ClassificationTrainer(BaseTrainer):
         super().__init__(cfg, overrides, _callbacks)
 
     def set_model_attributes(self):
-        """Set the YOLO model's class names from the loaded dataset."""
         # self.model.names = self.data["names"]
         pass
 
     def get_model(self, cfg=None, weights=None, verbose=True):
-        """Returns a modified PyTorch model configured for training YOLO."""
         model = ClassificationModel(
             cfg, nc=self.args.nc, verbose=verbose and RANK == -1
         )
@@ -50,14 +48,10 @@ class ClassificationTrainer(BaseTrainer):
         return model
 
     def setup_model(self):
-        """Load, create or download model for any task."""
-        if isinstance(
-            self.model, torch.nn.Module
-        ):  # if model is loaded beforehand. No setup needed
+        if isinstance(self.model, torch.nn.Module):
             return
 
         model, ckpt = str(self.model), None
-        # Load a YOLO model locally, from torchvision, or from yololab assets
         if model.endswith(".pt"):
             self.model, ckpt = attempt_load_one_weight(model, device="cpu")
             for p in self.model.parameters():
@@ -77,16 +71,13 @@ class ClassificationTrainer(BaseTrainer):
         return ckpt
 
     def build_dataset(self, img_path, mode="train", batch=None):
-        """Creates a ClassificationDataset instance given an image path, and mode (train/test etc.)."""
         return ClassificationDataset(
             root=img_path, args=self.args, augment=mode == "train", prefix=mode
         )
 
     def get_dataloader(self, dataset_path, batch_size=16, rank=0, mode="train"):
-        """Returns PyTorch DataLoader with transforms to preprocess images for inference."""
-        with torch_distributed_zero_first(
-            rank
-        ):  # init dataset *.cache only once if DDP
+        # init dataset *.cache only once if DDP
+        with torch_distributed_zero_first(rank):
             dataset = self.build_dataset(dataset_path, mode)
 
         loader = build_dataloader(dataset, batch_size, self.args.workers, rank=rank)
@@ -99,13 +90,11 @@ class ClassificationTrainer(BaseTrainer):
         return loader
 
     def preprocess_batch(self, batch):
-        """Preprocesses a batch of images and classes."""
         batch["img"] = batch["img"].to(self.device)
         batch["cls"] = batch["cls"].to(self.device)
         return batch
 
     def progress_string(self):
-        """Returns a formatted string showing training progress."""
         return ("\n" + "%11s" * (4 + len(self.loss_names))) % (
             "Epoch",
             "GPU_mem",
@@ -115,18 +104,12 @@ class ClassificationTrainer(BaseTrainer):
         )
 
     def get_validator(self):
-        """Returns an instance of ClassificationValidator for validation."""
         self.loss_names = ["loss"]
-        return yolo.classify.ClassificationValidator(
+        return classify.ClassificationValidator(
             self.test_loader, self.save_dir, _callbacks=self.callbacks
         )
 
     def label_loss_items(self, loss_items=None, prefix="train"):
-        """
-        Returns a loss dict with labelled training loss items tensor.
-
-        Not needed for classification but necessary for segmentation & detection
-        """
         keys = [f"{prefix}/{x}" for x in self.loss_names]
         if loss_items is None:
             return keys
@@ -135,12 +118,10 @@ class ClassificationTrainer(BaseTrainer):
 
     def plot_metrics(self):
         """Plots metrics from a CSV file."""
-        plot_results(
-            file=self.csv, classify=True, on_plot=self.on_plot
-        )  # save results.png
+        # save results.png
+        plot_results(file=self.csv, classify=True, on_plot=self.on_plot)
 
     def final_eval(self):
-        """Evaluate trained model and save validation results."""
         for f in self.last, self.best:
             if f.exists():
                 strip_optimizer(f)  # strip optimizers
@@ -154,13 +135,33 @@ class ClassificationTrainer(BaseTrainer):
         LOGGER.info(f"Results saved to {colorstr('bold', self.save_dir)}")
 
     def plot_training_samples(self, batch, ni):
-        """Plots training samples with their annotations."""
         plot_images(
             images=batch["img"],
             batch_idx=torch.arange(len(batch["img"])),
-            cls=batch["cls"].view(
-                -1
-            ),  # warning: use .view(), not .squeeze() for Classify models
+            # warning: use .view(), not .squeeze() for Classify models
+            cls=batch["cls"].view(-1),
             fname=self.save_dir / f"train_batch{ni}.jpg",
             on_plot=self.on_plot,
         )
+
+    def _init_metrics(self, model):
+        self.metrics = ClassifyMetrics()
+        self.names = model.names
+        self.nc = len(model.names)
+        self.confusion_matrix = ConfusionMatrix(
+            nc=self.nc, conf=self.args.conf, task="classify"
+        )
+        self.pred = []
+        self.targets = []
+
+    def _update_metrics(self, preds, batch):
+        n5 = min(len(self.names), 5)
+        self.pred.append(preds.argsort(1, descending=True)[:, :n5])
+        self.targets.append(batch["cls"])
+
+    def _get_stats(self):
+        self.metrics.process(self.targets, self.pred)
+        return self.metrics.results_dict
+
+    def _get_desc(self):
+        return ("%22s" + "%11s" * 2) % ("classes", "top1_acc", "top5_acc")

@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from yololab.engine.model import Model
-from yololab.models import yolo
+from yololab.models import classify, detect, segment, pose, obb
 from yololab.nn.tasks import (
     ClassificationModel,
     DetectionModel,
@@ -39,33 +39,33 @@ class YOLO(Model):
         return {
             "classify": {
                 "model": ClassificationModel,
-                "trainer": yolo.classify.ClassificationTrainer,
-                "validator": yolo.classify.ClassificationValidator,
-                "predictor": yolo.classify.ClassificationPredictor,
+                "trainer": classify.ClassificationTrainer,
+                "validator": classify.ClassificationValidator,
+                "predictor": classify.ClassificationPredictor,
             },
             "detect": {
                 "model": DetectionModel,
-                "trainer": yolo.detect.DetectionTrainer,
-                "validator": yolo.detect.DetectionValidator,
-                "predictor": yolo.detect.DetectionPredictor,
+                "trainer": detect.DetectionTrainer,
+                "validator": detect.DetectionValidator,
+                "predictor": detect.DetectionPredictor,
             },
             "segment": {
                 "model": SegmentationModel,
-                "trainer": yolo.segment.SegmentationTrainer,
-                "validator": yolo.segment.SegmentationValidator,
-                "predictor": yolo.segment.SegmentationPredictor,
+                "trainer": segment.SegmentationTrainer,
+                "validator": segment.SegmentationValidator,
+                "predictor": segment.SegmentationPredictor,
             },
             "pose": {
                 "model": PoseModel,
-                "trainer": yolo.pose.PoseTrainer,
-                "validator": yolo.pose.PoseValidator,
-                "predictor": yolo.pose.PosePredictor,
+                "trainer": pose.PoseTrainer,
+                "validator": pose.PoseValidator,
+                "predictor": pose.PosePredictor,
             },
             "obb": {
                 "model": OBBModel,
-                "trainer": yolo.obb.OBBTrainer,
-                "validator": yolo.obb.OBBValidator,
-                "predictor": yolo.obb.OBBPredictor,
+                "trainer": obb.OBBTrainer,
+                "validator": obb.OBBValidator,
+                "predictor": obb.OBBPredictor,
             },
         }
 
@@ -85,8 +85,8 @@ class YOLOWorld(Model):
         return {
             "detect": {
                 "model": WorldModel,
-                "validator": yolo.detect.DetectionValidator,
-                "predictor": yolo.detect.DetectionPredictor,
+                "validator": detect.DetectionValidator,
+                "predictor": detect.DetectionPredictor,
             }
         }
 

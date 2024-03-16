@@ -2,13 +2,13 @@
 
 from copy import copy
 
-from yololab.models import yolo
+from yololab.models import detect, segment
 from yololab.nn.tasks import SegmentationModel
 from yololab.utils import DEFAULT_CFG, RANK
 from yololab.utils.plotting import plot_images, plot_results
 
 
-class SegmentationTrainer(yolo.detect.DetectionTrainer):
+class SegmentationTrainer(detect.DetectionTrainer):
     def __init__(self, cfg=DEFAULT_CFG, overrides=None, _callbacks=None):
         """Initialize a SegmentationTrainer object with given arguments."""
         if overrides is None:
@@ -29,7 +29,7 @@ class SegmentationTrainer(yolo.detect.DetectionTrainer):
     def get_validator(self):
         """Return an instance of SegmentationValidator for validation of YOLO model."""
         self.loss_names = "box_loss", "seg_loss", "cls_loss", "dfl_loss"
-        return yolo.segment.SegmentationValidator(
+        return segment.SegmentationValidator(
             self.test_loader,
             save_dir=self.save_dir,
             args=copy(self.args),

@@ -7,7 +7,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-from yololab.models.yolo.detect import DetectionValidator
+from yololab.models.detect import DetectionValidator
 from yololab.utils import LOGGER, NUM_THREADS, ops
 from yololab.utils.checks import check_requirements
 from yololab.utils.metrics import SegmentMetrics, box_iou, mask_iou
