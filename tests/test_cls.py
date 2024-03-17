@@ -2,18 +2,18 @@ from yololab import YOLO
 
 if __name__ == "__main__":
     for m in [
-        "light-cls-tf_efficientnet_b0",
-        "light-cls-mobilenetv3_large",
-        "yolov8n-cls",
-        "yolov8s-cls",
-        "yolov8m-cls",
+        # "light-cls-tf_efficientnet_b0",
+        # "light-cls-mobilenetv3_large",
+        # "yolov8n-cls",
+        # "yolov8s-cls",
+        # "yolov8m-cls",
         "yolov8l-cls",
     ]:
         model = YOLO(f"{m}.yaml", task="classify", verbose=True)  # 从头开始构建新模型
 
         model.train(
             data="datasets/imagenet10",
-            epochs=200,
+            epochs=1,
             nc=15,
             device=0,
             imgsz=224,

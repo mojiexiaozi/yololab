@@ -107,7 +107,7 @@ def torch_safe_load(weight):
         with temporary_modules(
             {
                 "yololab.yolo.utils": "yololab.utils",
-                "yololab.yolo.v8": "yololab.models.yolo",
+                "yololab.yolo.v8": "yololab.models",
                 "yololab.yolo.data": "yololab.data",
             }
         ):  # for legacy 8.0 Classify and Pose models

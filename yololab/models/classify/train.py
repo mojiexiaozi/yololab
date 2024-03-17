@@ -8,14 +8,9 @@ from yololab.engine.trainer import BaseTrainer
 from yololab.models import classify
 from yololab.nn.tasks import ClassificationModel
 from yololab.nn.utils import attempt_load_one_weight
-from yololab.utils.metrics import ClassifyMetrics, ConfusionMatrix
-from yololab.utils import DEFAULT_CFG, LOGGER, RANK, colorstr
+from yololab.utils import DEFAULT_CFG, RANK
 from yololab.utils.plotting import plot_images, plot_results
-from yololab.utils.torch_utils import (
-    is_parallel,
-    strip_optimizer,
-    torch_distributed_zero_first,
-)
+from yololab.utils.torch_utils import is_parallel, torch_distributed_zero_first
 
 
 class ClassificationTrainer(BaseTrainer):
@@ -48,6 +43,7 @@ class ClassificationTrainer(BaseTrainer):
         return model
 
     def setup_model(self):
+        # if model is loaded beforehand. No setup needed
         if isinstance(self.model, torch.nn.Module):
             return
 
@@ -81,7 +77,6 @@ class ClassificationTrainer(BaseTrainer):
             dataset = self.build_dataset(dataset_path, mode)
 
         loader = build_dataloader(dataset, batch_size, self.args.workers, rank=rank)
-        # Attach inference transforms
         if mode != "train":
             if is_parallel(self.model):
                 self.model.module.transforms = loader.dataset.torch_transforms
@@ -90,6 +85,7 @@ class ClassificationTrainer(BaseTrainer):
         return loader
 
     def preprocess_batch(self, batch):
+        """Preprocesses a batch of images and classes."""
         batch["img"] = batch["img"].to(self.device)
         batch["cls"] = batch["cls"].to(self.device)
         return batch
@@ -117,51 +113,17 @@ class ClassificationTrainer(BaseTrainer):
         return dict(zip(keys, loss_items))
 
     def plot_metrics(self):
-        """Plots metrics from a CSV file."""
-        # save results.png
-        plot_results(file=self.csv, classify=True, on_plot=self.on_plot)
-
-    def final_eval(self):
-        for f in self.last, self.best:
-            if f.exists():
-                strip_optimizer(f)  # strip optimizers
-                if f is self.best:
-                    LOGGER.info(f"\nValidating {f}...")
-                    self.validator.args.data = self.args.data
-                    self.validator.args.plots = self.args.plots
-                    self.metrics = self.validator(model=f)
-                    self.metrics.pop("fitness", None)
-                    self.run_callbacks("on_fit_epoch_end")
-        LOGGER.info(f"Results saved to {colorstr('bold', self.save_dir)}")
+        plot_results(
+            file=self.csv, classify=True, on_plot=self.on_plot
+        )  # save results.png
 
     def plot_training_samples(self, batch, ni):
         plot_images(
             images=batch["img"],
             batch_idx=torch.arange(len(batch["img"])),
-            # warning: use .view(), not .squeeze() for Classify models
-            cls=batch["cls"].view(-1),
+            cls=batch["cls"].view(
+                -1
+            ),  # warning: use .view(), not .squeeze() for Classify models
             fname=self.save_dir / f"train_batch{ni}.jpg",
             on_plot=self.on_plot,
         )
-
-    def _init_metrics(self, model):
-        self.metrics = ClassifyMetrics()
-        self.names = model.names
-        self.nc = len(model.names)
-        self.confusion_matrix = ConfusionMatrix(
-            nc=self.nc, conf=self.args.conf, task="classify"
-        )
-        self.pred = []
-        self.targets = []
-
-    def _update_metrics(self, preds, batch):
-        n5 = min(len(self.names), 5)
-        self.pred.append(preds.argsort(1, descending=True)[:, :n5])
-        self.targets.append(batch["cls"])
-
-    def _get_stats(self):
-        self.metrics.process(self.targets, self.pred)
-        return self.metrics.results_dict
-
-    def _get_desc(self):
-        return ("%22s" + "%11s" * 2) % ("classes", "top1_acc", "top5_acc")

@@ -531,7 +531,6 @@ class BaseTrainer:
                 f"\n{epoch - self.start_epoch + 1} epochs completed in "
                 f"{(time.time() - self.train_time_start) / 3600:.3f} hours."
             )
-            self.final_eval()
             if self.args.plots:
                 self.plot_metrics()
             self.run_callbacks("on_train_end")
@@ -539,7 +538,6 @@ class BaseTrainer:
         self.run_callbacks("teardown")
 
     def save_model(self):
-        """Save model training checkpoints with additional metadata."""
         import pandas as pd  # scope for faster startup
 
         metrics = {**self.metrics, **{"fitness": self.fitness}}
@@ -580,10 +578,8 @@ class BaseTrainer:
         return root_dir / "train", root_dir / "validation"
 
     def setup_model(self):
-        """Load/create/download model for any task."""
-        if isinstance(
-            self.model, torch.nn.Module
-        ):  # if model is loaded beforehand. No setup needed
+        # if model is loaded beforehand. No setup needed
+        if isinstance(self.model, torch.nn.Module):
             return
 
         model, weights = self.model, None
@@ -599,7 +595,6 @@ class BaseTrainer:
         return ckpt
 
     def optimizer_step(self):
-        """Perform a single step of the training optimizer with gradient clipping and EMA update."""
         self.scaler.unscale_(self.optimizer)  # unscale gradients
         torch.nn.utils.clip_grad_norm_(
             self.model.parameters(), max_norm=10.0
@@ -611,15 +606,9 @@ class BaseTrainer:
             self.ema.update(self.model)
 
     def preprocess_batch(self, batch):
-        """Allows custom preprocessing model inputs and ground truths depending on task type."""
         return batch
 
     def validate(self):
-        """
-        Runs validation on test set using self.validator.
-
-        The returned dict is expected to contain "fitness" key.
-        """
         metrics = self.validator(self)
         fitness = metrics.pop(
             "fitness", -self.loss.detach().cpu().numpy()
@@ -697,18 +686,6 @@ class BaseTrainer:
         path = Path(name)
         self.plots[path] = {"data": data, "timestamp": time.time()}
 
-    def final_eval(self):
-        """Performs final evaluation and validation for object detection YOLO model."""
-        for f in self.last, self.best:
-            if f.exists():
-                strip_optimizer(f)  # strip optimizers
-                if f is self.best:
-                    LOGGER.info(f"\nValidating {f}...")
-                    self.validator.args.plots = self.args.plots
-                    self.metrics = self.validator(model=f)
-                    self.metrics.pop("fitness", None)
-                    self.run_callbacks("on_fit_epoch_end")
-
     def check_resume(self, overrides):
         """Check if resume checkpoint exists and update arguments accordingly."""
         resume = self.args.resume
@@ -780,28 +757,9 @@ class BaseTrainer:
     def build_optimizer(
         self, model, name="auto", lr=0.001, momentum=0.9, decay=1e-5, iterations=1e5
     ):
-        """
-        Constructs an optimizer for the given model, based on the specified optimizer name, learning rate, momentum,
-        weight decay, and number of iterations.
-
-        Args:
-            model (torch.nn.Module): The model for which to build an optimizer.
-            name (str, optional): The name of the optimizer to use. If 'auto', the optimizer is selected
-                based on the number of iterations. Default: 'auto'.
-            lr (float, optional): The learning rate for the optimizer. Default: 0.001.
-            momentum (float, optional): The momentum factor for the optimizer. Default: 0.9.
-            decay (float, optional): The weight decay for the optimizer. Default: 1e-5.
-            iterations (float, optional): The number of iterations, which determines the optimizer if
-                name is 'auto'. Default: 1e5.
-
-        Returns:
-            (torch.optim.Optimizer): The constructed optimizer.
-        """
-
         g = [], [], []  # optimizer parameter groups
-        bn = tuple(
-            v for k, v in nn.__dict__.items() if "Norm" in k
-        )  # normalization layers, i.e. BatchNorm2d()
+        # normalization layers, i.e. BatchNorm2d()
+        bn = tuple(v for k, v in nn.__dict__.items() if "Norm" in k)
         if name == "auto":
             LOGGER.info(
                 f"{colorstr('optimizer:')} 'optimizer=auto' found, "
