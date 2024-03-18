@@ -319,10 +319,7 @@ class v8DetectionLoss:
 
 
 class v8SegmentationLoss(v8DetectionLoss):
-    """Criterion class for computing training losses."""
-
     def __init__(self, model):  # model must be de-paralleled
-        """Initializes the v8SegmentationLoss class, taking a de-paralleled model as argument."""
         super().__init__(model)
         self.overlap = model.args.overlap_mask
 

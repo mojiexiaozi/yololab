@@ -21,4 +21,4 @@ head:
 
   - [-1, 1, nn.Upsample, [None, 2, "nearest"]]
   - [-1, 1, UNetDecoderBlock, [16]]
-  - [-1, 1, SegmentationHead, [3]]
+  - [-1, 1, Semantic, [3]]

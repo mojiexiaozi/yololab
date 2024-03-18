@@ -26,4 +26,4 @@ head:
   - [[-1, -3], 1, Shortcut, []] # 23
   - [-1, 1, LightConv, [42, 3, 1]] # 24
   - [-1, 1, LightConv, [64, 3, 1]] # 25
-  - [-1, 1, SegmentationHead, [3, 4]]
+  - [-1, 1, Semantic, [3, 4]]

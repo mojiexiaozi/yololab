@@ -13,8 +13,6 @@ __all__ = "Detect", "Segment", "Pose", "Classify", "OBB"
 
 
 class Detect(nn.Module):
-    """YOLOv8 Detect head for detection models."""
-
     dynamic = False  # force grid reconstruction
     export = False  # export mode
     shape = None
@@ -47,7 +45,6 @@ class Detect(nn.Module):
         self.dfl = DFL(self.reg_max) if self.reg_max > 1 else nn.Identity()
 
     def forward(self, x):
-        """Concatenates and returns predicted bounding boxes and class probabilities."""
         for i in range(self.nl):
             x[i] = torch.cat((self.cv2[i](x[i]), self.cv3[i](x[i])), 1)
         if self.training:  # Training path
@@ -75,7 +72,6 @@ class Detect(nn.Module):
             box, cls = x_cat.split((self.reg_max * 4, self.nc), 1)
 
         if self.export and self.format in ("tflite", "edgetpu"):
-            # Precompute normalization factor to increase numerical stability
             # See https://github.com/yololab/yololab/issues/7371
             grid_h = shape[2]
             grid_w = shape[3]
@@ -98,8 +94,6 @@ class Detect(nn.Module):
     def bias_init(self):
         """Initialize Detect() biases, WARNING: requires stride availability."""
         m = self  # self.model[-1]  # Detect() module
-        # cf = torch.bincount(torch.tensor(np.concatenate(dataset.labels, 0)[:, 0]).long(), minlength=nc) + 1
-        # ncf = math.log(0.6 / (m.nc - 0.999999)) if cf is None else torch.log(cf / cf.sum())  # nominal class frequency
         for a, b, s in zip(m.cv2, m.cv3, m.stride):  # from
             a[-1].bias.data[:] = 1.0  # box
             b[-1].bias.data[: m.nc] = math.log(
@@ -112,10 +106,7 @@ class Detect(nn.Module):
 
 
 class Segment(Detect):
-    """YOLOv8 Segment head for segmentation models."""
-
     def __init__(self, nc=80, nm=32, npr=256, ch=()):
-        """Initialize the YOLO model attributes such as the number of masks, prototypes, and the convolution layers."""
         super().__init__(nc, ch)
         self.nm = nm  # number of masks
         self.npr = npr  # number of protos
@@ -129,7 +120,6 @@ class Segment(Detect):
         )
 
     def forward(self, x):
-        """Return model outputs and mask coefficients if training, otherwise return outputs and mask coefficients."""
         p = self.proto(x[0])  # mask protos
         bs = p.shape[0]  # batch size
 
@@ -144,6 +134,27 @@ class Segment(Detect):
             if self.export
             else (torch.cat([x[0], mc], 1), (x[1], mc, p))
         )
+
+
+class Semantic(nn.Sequential):
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        kernel_size=3,
+        stride=1,
+        padding=1,
+        upsampling=1,
+    ):
+        conv = nn.Conv2d(
+            in_channels, out_channels, kernel_size, padding=padding, stride=stride
+        )
+        upsampling = (
+            nn.Upsample(scale_factor=upsampling, mode="bicubic")
+            if upsampling > 1
+            else nn.Identity()
+        )
+        super().__init__(conv, upsampling)
 
 
 class OBB(Detect):
